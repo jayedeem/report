@@ -51,6 +51,7 @@ def request(endpoint):
     return res
 
 def get_status():
+    #taking json from requests 
     res = request(REQUEST_POLL)
     
     for value in res['monitor_poll']:
@@ -82,10 +83,13 @@ def get_status():
     
     #will pd.merge on 'id'
     get_name(df1)
+    
 get_status()
 
 #Since the first report doesn't give the name of the location I have to hit another endpoint to get the name and merge on ID with name
 def get_name(csv):
+    
+    #taking json from requests 
     res = request(QUERY_BY_ID)
     
     #loop through to find what is active or not
@@ -159,6 +163,8 @@ def check_folder(last_week_file, current_week_file, new_folder, reports_path):
         #takes current week and rename it to next week for next week report
         shutil.move(f'{last_week_file}', f'{new_folder}/')
         df1.rename(columns={'Current Week': 'Last Week'}, inplace=True)
+        
+        #check to see if tail end merged correctly
         print(df1.head(10))
         df1.to_csv(
             f'{reports_path}last_week--{timestr}.csv', index=False)
