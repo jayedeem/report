@@ -26,6 +26,7 @@ HEADERS = {'Authorization': f'Bearer {API_KEY}'}
 REQUEST_POLL = f'https://<ENDPOINT>/rest/monitor_poll/v2?not_modified_since=1970-01-01T00%3A00%3A0&domain_id={domain_id}'
 QUERY_BY_ID = 'https://<ENDPOINT>/rest/host/v17/'
 GMAIL_PW = '<APP PASSWORD>'
+
 #! System Variables
 reports_path = '/path/to/reports'
 path = '/path/to/dir'
@@ -38,6 +39,7 @@ host = []
 #search for file based on 'last_week' 
 last_week_search = glob.glob(
     f'{reports_path}/last_week*') 
+
 #search for file based on 'current_week' 
 current_week_search = glob.glob(
     f'{reports_path}/current_week*')
@@ -47,6 +49,7 @@ def request(endpoint):
         url= endpoint, headers=HEADERS) #request json 
     res = r.json()
     return res
+
 def get_status():
     res = request(REQUEST_POLL)
     
@@ -56,21 +59,27 @@ def get_status():
     #append to a list       
             poll.append(value) 
     #needed to run in pandas
+    
     jsonData = json.dumps(poll) 
     # open in pandas
     df1 = pd.read_json(jsonData)
+    
     #drop these col headers
     df1 = df1.drop(['domain_id', 'id', 'poll_next_expected_utc',
                     'private_ip', 'product_version', 'public_ip'], axis=1) 
+    
     #change 1 to online and 2 of Missing in Action
     df1['monitor_status'].replace(
         {1: 'Online', 2: 'Missing in Action'}, inplace=True) 
+    
     #change UTC to Month/Date/Year, I don't know how to convert UTC to days, mins, hours
     df1['poll_last_utc'] = pd.to_datetime(
     df1['poll_last_utc']).dt.strftime('%m-%d-%Y') 
+    
     #col renames
     df1.rename(columns={'client_resource_id': 'id', 'monitor_status': 'status',
                     'poll_last_utc': 'last_online'}, inplace=True) 
+    
     #will pd.merge on 'id'
     get_name(df1)
 get_status()
@@ -85,22 +94,30 @@ def get_name(csv):
             host.append(value)
     jData = json.dumps(host)
     df2 = pd.read_json(jData)
+    
     #drop cols
     df2 = df2.drop(['active', 'config_profile_bag_id', 'container_id', 'custom_unique_id', 'db_pickup_tm_utc', 'discovery_status', 'display_unit_id', 'domain_id',
                     'geolocation', 'nscreens', 'primary_mac_address', 'public_key_fingerprint', 'remote_clear_db_tm_utc', 'remote_reboot_tm_utc',
                     'secondary_mac_address', 'volume'], axis=1) 
+    
     #need to "Fixed Width" example of the name UTV0001 XYZ Store
     new = df2['name'].str.split(" ", n = 1, expand=True) 
+    
     #stores TV Number
     df2['TV Number'] = new[0]
+    
     #store Store Name 
     df2['Store Name'] = new[1] 
+    
     #drop col
     df2.drop(columns=['name'], inplace=True) 
+   
     #merging both DF's on id 
     df2 = pd.merge(df2, csv, on=['id']) 
+   
     #drop col
     df2 = df2.drop(['id'], axis=1)
+   
     #call next func
     merge_on_main(df2) 
 
@@ -109,28 +126,36 @@ def merge_on_main(csv):
     df3 = pd.read_csv(
         f'{reports_path}/SO_Listing.csv') #main CSV 
     df3.rename(columns={'UltraTV#': 'TV Number', }, inplace=True)
+    
     #example col TV Number	Customer	RetailerID	Current Week	last_online
     #can't merge on retailer id because ENDPOINTS do not have that info since it is internal
     df4 = pd.merge(df3, csv, on=['TV Number'], how='outer') 
+   
     #col drop 
     df4.drop(columns=['Store Name'], inplace=True) 
+   
     #fill in empty space with 'Inactive' means not tied into CMS
     df4['status'].fillna('Inactive', inplace=True) 
     df4.rename(columns={'status': 'Current Week', }, inplace=True)
     df4['last_online'].fillna('Inactive', inplace=True)
+   
     #report for this week
     df4.to_csv(
         f'{path}/current_week{timestr}.csv', index=False) 
+   
     #Gives time to write CSV
     time.sleep(2) 
     file_move()
     
    #check if folder exists 
 def check_folder(last_week_file, current_week_file, new_folder, reports_path):
+        
         #need to hold in memory so move can happen
         df1 = pd.read_csv(str(current_week_file))
+        
         #copy current week to new folder 
         shutil.move(f'{current_week_file}', f'{new_folder}')
+        
         #takes current week and rename it to next week for next week report
         shutil.move(f'{last_week_file}', f'{new_folder}/')
         df1.rename(columns={'Current Week': 'Last Week'}, inplace=True)
@@ -142,7 +167,7 @@ def check_folder(last_week_file, current_week_file, new_folder, reports_path):
         os.chdir(new_folder) 
         report_completion()
         
-   #if no folder exists run this     
+#if no folder exists run this     
 def no_folder():
         print(f'Folder does not exist! Making folder: {today}')
         #make dir based on today's date and make it R/W
