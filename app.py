@@ -14,7 +14,6 @@ import shutil
 import glob
 import requests
 import json
-import time
 import pandas as pd
 from datetime import datetime, timedelta
 import dateutil.parser
