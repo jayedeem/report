@@ -45,8 +45,8 @@ current_week_search = glob.glob(
 def request(endpoint):
     r = requests.get(
         url= endpoint, headers=HEADERS) #request json 
-    r = r.json()
-    return r
+    res = r.json()
+    return res
 def get_status():
     res = request(REQUEST_POLL)
     
@@ -127,19 +127,17 @@ def merge_on_main(csv):
     
    #check if folder exists 
 def check_folder(last_week_file, current_week_file, new_folder, reports_path):
-        # #find newest last_week.csv file based on modified time
-        # last_week_file = max(last_week_search, key=os.path.getmtime) 
-        # #find newest current_week.csv file based on modified time
-        # current_week_file = max(current_week_search, key=os.path.getmtime)
-        # #finds newest folder if already made
-        # new_folder = max(glob.glob(os.path.join(path, '*/')),
-        #                  key=os.path.getmtime) 
+        #need to hold in memory so move can happen
+        df1 = pd.read_csv(str(current_week_file))
         #copy current week to new folder 
-        shutil.copy2(f'{current_week_file}', f'{new_folder}') 
-        #moves last week file..no longer needed after today
-        shutil.move(f'{last_week_file}', f'{new_folder}/')  
+        shutil.move(f'{current_week_file}', f'{new_folder}')
         #takes current week and rename it to next week for next week report
-        shutil.move(f'{current_week_file}', f'{reports_path}/last_week-from-{timestr}.csv') 
+        shutil.move(f'{last_week_file}', f'{new_folder}/')
+        df1.rename(columns={'Current Week': 'Last Week'}, inplace=True)
+        print(df1.head(10))
+        df1.to_csv(
+            f'{reports_path}last_week--{timestr}.csv', index=False)
+        
         #cd into new folder
         os.chdir(new_folder) 
         report_completion()
